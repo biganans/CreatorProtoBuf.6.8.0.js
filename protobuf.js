@@ -5143,6 +5143,8 @@ Root.prototype.load = function load(filename, options, callback) {
         cb(err, root);
     }
 
+    var total_file = 0
+    var current_loaded = 0
     // Processes a single file
     function process(filename, source) {
         try {
@@ -5155,6 +5157,8 @@ Root.prototype.load = function load(filename, options, callback) {
                 var parsed = parse(source, self, options),
                     resolved,
                     i = 0;
+
+                
                 if (parsed.imports)
                     for (; i < parsed.imports.length; ++i)
                         if (resolved = self.resolvePath(filename, parsed.imports[i]))
@@ -5163,12 +5167,19 @@ Root.prototype.load = function load(filename, options, callback) {
                     for (i = 0; i < parsed.weakImports.length; ++i)
                         if (resolved = self.resolvePath(filename, parsed.weakImports[i]))
                             fetch(resolved, true);
+
+                ++current_loaded
+                console.log("process", current_loaded, total_file, filename)
+                if(current_loaded >= total_file) {
+                    if (!sync && !queued)
+                        finish(null, self); // only once anyway
+                }
             }
         } catch (err) {
             finish(err);
         }
-        if (!sync && !queued)
-            finish(null, self); // only once anyway
+        // if (!sync && !queued)
+        //     finish(null, self); // only once anyway
     }
 
     // Fetches a single file
@@ -5214,6 +5225,7 @@ Root.prototype.load = function load(filename, options, callback) {
             process(filename, source);
         } else {
             ++queued;
+            ++total_file
             util.fetch(filename, function(err, source) {
                 --queued;
                 /* istanbul ignore if */
